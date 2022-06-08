@@ -1,9 +1,8 @@
 (ns clj-cas-client.core-test
   (:use clj-cas-client.core
         clojure.test)
-  (:import (org.jasig.cas.client.validation Cas10TicketValidator
-                                            TicketValidationException
-                                            AssertionImpl)))
+  (:import (org.jasig.cas.client.validation TicketValidationException
+                                            AssertionImpl Cas20ServiceTicketValidator)))
 
 (deftest constants-test
   (is (= artifact-parameter-name "ticket"))
@@ -11,17 +10,17 @@
 
 (deftest validator-maker-test
   (let [v (validator-maker (fn [] "foo bar"))]
-    (is (instance? Cas10TicketValidator v))))
+    (is (instance? Cas20ServiceTicketValidator v))))
 
 (deftest authentication-filter-test
   (let [af (authentication-filter (fn [r] [:test-authentication-filter r]) (fn [] "cas server fn") (fn [] "service fn")
                                   (fn [r] (get-in r [:headers "ajax-request"])))]
     (is (= (af {:session {"_const_cas_assertion_" "blarg"}}) [:test-authentication-filter {:session {"_const_cas_assertion_" "blarg"}}]))
     (is (= (af {:query-params {"ticket" "the tick"}}) [:test-authentication-filter {:query-params {"ticket" "the tick"}}]))
-    (is (= (af {:session {"_const_cas_assertion_" "blarg"}
-                :query-params {"ticket" "the tick"}}) [:test-authentication-filter {:session {"_const_cas_assertion_" "blarg"}
-                                                                              :query-params {"ticket" "the tick"}}]))
-    (is (= (af {}) {:status 302 :headers {"Location" "cas server fn/login?service=service fn"}  :body ""}))
+    (is (= (af {:session      {"_const_cas_assertion_" "blarg"}
+                :query-params {"ticket" "the tick"}}) [:test-authentication-filter {:session      {"_const_cas_assertion_" "blarg"}
+                                                                                    :query-params {"ticket" "the tick"}}]))
+    (is (= (af {}) {:status 302 :headers {"Location" "cas server fn/login?service=service fn"} :body ""}))
     (is (= (af {:headers {"ajax-request" true}}) {:status 403}))))
 
 (def ^:dynamic test-validator (fn [cas-server-fn ticket service] nil))
@@ -42,8 +41,8 @@
                                (is (= service "service fn"))
                                :assertion)]
       (is (= (tf {:query-params {"ticket" "ticket"}})
-             {:res [:test-ticket-validation-filter {:query-params {"ticket" "ticket"
-                                                             "_const_cas_assertion_" :assertion}}] :session {"_const_cas_assertion_" :assertion}})))
+             {:res [:test-ticket-validation-filter {:query-params {"ticket"                "ticket"
+                                                                   "_const_cas_assertion_" :assertion}}] :session {"_const_cas_assertion_" :assertion}})))
 
     (binding [test-validator (fn [cas-server-fn ticket service] (throw (TicketValidationException. "blah")))]
       (is (= (tf {:query-params {"ticket" "ticket"}})
@@ -56,5 +55,5 @@
     (is (= ((user-principal-filter (fn [req] {:res [:user-principal-filter req]})) {:req 42 :query-params {"_const_cas_assertion_" assertion}})
            {:res [:user-principal-filter {:username "foobar" :req 42 :query-params {"_const_cas_assertion_" assertion}}]}))
     (is (= ((user-principal-filter (fn [req] {:res [:user-principal-filter req]})) {:req 42 :session {"_const_cas_assertion_" assertion}})
-           {:res [:user-principal-filter {:username "foobar" :req 42 :session {"_const_cas_assertion_" assertion}}]}))
-    ))
+           {:res [:user-principal-filter {:username "foobar" :req 42 :session {"_const_cas_assertion_" assertion}}]}))))
+

@@ -3,20 +3,19 @@
   (:use ring.util.response)
   (:require [clojure.tools.logging :as log]
             [ring.middleware.params :refer [wrap-params]])
-  (:import (org.jasig.cas.client.validation Cas10TicketValidator
-                                            TicketValidationException)))
+  (:import (org.jasig.cas.client.validation TicketValidationException Cas20ServiceTicketValidator)))
 (def artifact-parameter-name "ticket")
 (def const-cas-assertion     "_const_cas_assertion_")
 
 (defprotocol Validator
   (validate [v ticket service]))
 
-(extend-type Cas10TicketValidator
+(extend-type Cas20ServiceTicketValidator
   Validator
   (validate [v ticket service] (.validate v ticket service)))
 
 (defn validator-maker [cas-server-fn]
-  (Cas10TicketValidator. (cas-server-fn)))
+  (Cas20ServiceTicketValidator. (cas-server-fn)))
 
 (defn- valid? [request]
   (or (get-in request [:session const-cas-assertion])
@@ -69,7 +68,7 @@
 (defn cas
   "Middleware that requires the user to authenticate with a CAS server.
 
-  The users's username is added to the request map under the :username key.
+  The user's username is added to the request map under the :username key.
 
   Accepts the following options:
 
