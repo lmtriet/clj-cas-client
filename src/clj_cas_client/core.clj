@@ -50,8 +50,8 @@
             (let [assertion (validate ticket-validator t (service-fn))]
               (session-assertion (handler (request-assertion request assertion)) assertion))
             (catch TicketValidationException e
-              (log/error "Ticket validation exception " e)
-              {:status 403}))
+              (log/error (str "Invalid ticket :" (.getMessage e)))
+              (redirect (str (cas-server-fn) "/login?service=" (service-fn)))))
           (handler request))))))
 
 (def ticket-validation-filter (ticket-validation-filter-maker validator-maker))
